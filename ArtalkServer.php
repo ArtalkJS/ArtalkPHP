@@ -147,25 +147,31 @@ class ArtalkServer {
       return $this->error('page_key 不能为空');
     }
     
-    $commentsRaw = self::getCommentsTable()->where('page_key', '=', $pageKey)->orderBy('date')->findAll()->asArray();
+    $commentsRaw = self::getCommentsTable()
+      ->where('page_key', '=', $pageKey)
+      ->orderBy('date', 'DESC')
+      ->findAll()
+      ->asArray();
+    
     $comments = [];
     foreach ($commentsRaw as $item) {
-      $comments = $this->frontendCommentData($item);
+      $comments[] = $this->frontendCommentData($item);
     }
     
     return $this->success('获取成功', ['comments' => $comments]);
   }
   
-  private function frontendCommentData($comment)
+  private function frontendCommentData($rawComment)
   {
+    $comment = [];
     $showField = ['id', 'content', 'nick', 'link', 'page_key', 'rid', 'ua', 'date'];
-    foreach ($comment as $key => $value) {
-      if (!in_array($key, $showField)) {
-        unset($comment[$key]);
+    foreach ($rawComment as $key => $value) {
+      if (in_array($key, $showField)) {
+        $comment[$key] = $value;
       }
     }
-    
-    $comment['emailEncrypted'] = md5(strtolower($comment['email']));
+  
+    $comment['email_encrypted'] = md5(strtolower(trim($rawComment['email'])));
     return $comment;
   }
 }
