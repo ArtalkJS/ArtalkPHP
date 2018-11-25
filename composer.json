@@ -13,6 +13,9 @@
     "greg0/lazer-database": "^1.1"
   },
   "scripts": {
-
+    "dev": "php -S localhost:23366 -t public"
+  },
+  "config": {
+    "process-timeout": 0
   }
 }
