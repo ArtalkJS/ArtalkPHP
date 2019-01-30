@@ -10,6 +10,7 @@
   ],
   "require": {
     "PHP": ">=7.0",
+    "ext-json": "*",
     "greg0/lazer-database": "^1.1"
   },
   "scripts": {
