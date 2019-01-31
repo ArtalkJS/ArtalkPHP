@@ -12,53 +12,50 @@ trait Permission
     }
   }
   
-  private function isNeedAdminCheck($nick, $email)
-  {
-    $adminUsers = $this->conf['admin_users'] ?? [];
-    if (empty($adminUsers)) {
-      return false;
-    }
-    
-    if (is_null($user = $this->findAdminUser($nick, $email, null, false))) {
-      return false;
-    }
-  
-    $sessionId = $_SESSION['admin_user_id'];
-    if (isset($sessionId) && !empty($sessionUser = $adminUsers[$sessionId])) {
-      if (strtolower($sessionUser['nick']) == strtolower($user['nick'])
-        && strtolower($sessionUser['email']) == strtolower($user['email'])) {
-        return false;
-      }
-    }
-    
-    return true;
+  private function getAdminUsers() {
+    return $this->conf['admin_users'] ?? [];
   }
   
-  private function findAdminUser($nick, $email, $password, $needPassword = true)
+  private function findAdminUser($nick, $email)
   {
     $nick = trim($nick);
     $email = trim($email);
-    $password = trim($password);
     
-    $adminUsers = $this->conf['admin_users'] ?? [];
+    $adminUsers = $this->getAdminUsers();
     if (empty($adminUsers)) {
       return null;
     }
     
-    $userKey = null;
-    foreach ($adminUsers as $key => $user) {
-      if (strtolower($user['nick']) == strtolower($nick) || strtolower($user['email']) == strtolower($email)) {
-        if (!$needPassword) {
-          $userKey = $key;
-          continue;
-        }
-        
-        if ($user['password'] == $password) {
-          $userKey = $key;
-        }
+    $user = [];
+    foreach ($adminUsers as $i => $item) {
+      if (strtolower($item['nick']) === strtolower($nick) || strtolower($item['email']) === strtolower($email)) {
+        $user = $item;
+        break;
       }
     }
     
-    return $userKey;
+    return $user;
+  }
+  
+  private function isAdmin($nick, $email)
+  {
+    if (empty($this->getAdminUsers()))
+      return false;
+    
+    if (empty($this->findAdminUser($nick, $email)))
+      return false;
+    
+    return true;
+  }
+  
+  private function checkAdminPassword($nick, $email, $password)
+  {
+    $password = trim($password);
+    $user = $this->findAdminUser($nick, $email);
+    if (!empty($user) && $password === trim($user['password'])) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }

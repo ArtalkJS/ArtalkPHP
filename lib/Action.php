@@ -3,6 +3,25 @@ namespace lib;
 
 trait Action
 {
+  public function actionAdminCheck()
+  {
+    $nick = trim($_POST['nick'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+    if (empty($nick)) return $this->error('昵称 不能为空');
+    if (empty($email)) return $this->error('邮箱 不能为空');
+    if (empty($password)) return $this->error('密码 不能为空');
+    
+    if (!$this->isAdmin($nick, $email)) {
+      return $this->error('无需管理员权限');
+    }
+    if ($this->checkAdminPassword($nick, $email, $password)) {
+      return $this->success('密码正确');
+    } else {
+      return $this->error('密码错误');
+    }
+  }
+  
   public function actionCommentAdd()
   {
     $content = trim($_POST['content'] ?? '');
@@ -12,14 +31,15 @@ trait Action
     $rid = intval(trim($_POST['rid'] ?? 0));
     $pageKey = trim($_POST['page_key'] ?? '');
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $password = trim($_POST['password'] ?? '');
   
     if (empty($pageKey)) return $this->error('pageKey 不能为空');
     if (empty($nick)) return $this->error('昵称不能为空');
     if (empty($email)) return $this->error('邮箱不能为空');
     if (empty($content)) return $this->error('内容不能为空');
   
-    if ($this->isNeedAdminCheck($nick, $email)) {
-      return $this->error('需要验证管理员身份');
+    if ($this->isAdmin($nick, $email) && !$this->checkAdminPassword($nick, $email, $password)) {
+      return $this->error('需要管理员身份', ['need_password' => true]);
     }
     if (!empty($link) && !$this->urlValidator($link)) {
       return $this->error('链接不是 URL');
@@ -76,20 +96,10 @@ trait Action
     }
     
     $comment['email_encrypted'] = md5(strtolower(trim($rawComment['email'])));
-    return $comment;
-  }
-  
-  public function actionLoginAsAdmin()
-  {
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-  
-    if (!is_null($userKey = $this->findAdminUser($nick, $email, $password))) {
-      $_SESSION['admin_user_id'] = $userKey;
-      return $this->success('登录成功');
-    } else {
-      return $this->error('登录失败');
+    $comment['badge'] = null;
+    if ($this->isAdmin($comment['nick'], $comment['email'])) {
+      $comment['badge'] = '管理员';
     }
+    return $comment;
   }
 }

@@ -1,5 +1,6 @@
 <?php
 namespace lib;
+use Lazer\Classes\Database as Lazer;
 
 trait Table
 {
