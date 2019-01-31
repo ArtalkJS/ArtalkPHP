@@ -102,4 +102,42 @@ trait Action
     }
     return $comment;
   }
+  
+  public function actionCommentReplyGet()
+  {
+    $nick = trim($_POST['nick'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    if (empty($nick)) return $this->error('昵称 不能为空');
+    if (empty($email)) return $this->error('邮箱 不能为空');
+    
+    $replyRaw = self::getCommentsTable();
+    
+    if (!$this->isAdmin($nick, $email)) {
+      $myComments = self::getCommentsTable()
+        ->where('nick', '=', $nick)
+        ->andWhere('email', '=', $email)
+        ->orderBy('date', 'DESC')
+        ->findAll()
+        ->asArray();
+  
+      $idList = [];
+      foreach ($myComments as $item) {
+        $idList[] = $item['id'];
+      }
+      
+      $replyRaw = $replyRaw->where('rid', 'IN', $idList);
+    }
+    
+    $replyRaw = $replyRaw
+      ->orderBy('date', 'DESC')
+      ->findAll()
+      ->asArray();
+  
+    $reply = [];
+    foreach ($replyRaw as $item) {
+      $reply[] = $this->beautifyCommentData($item);
+    }
+    
+    return $this->success('获取成功', ['reply_comments' => $reply]);
+  }
 }
