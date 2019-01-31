@@ -97,7 +97,7 @@ trait Action
     
     $comment['email_encrypted'] = md5(strtolower(trim($rawComment['email'])));
     $comment['badge'] = null;
-    if ($this->isAdmin($comment['nick'], $comment['email'])) {
+    if ($this->isAdmin($comment['nick'] ?? null, $comment['email'] ?? null)) {
       $comment['badge'] = '管理员';
     }
     return $comment;
