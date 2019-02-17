@@ -23,10 +23,24 @@ trait Table
         'date' => 'string',
       ]);
     }
+    // captcha
+    try{
+      \Lazer\Classes\Helpers\Validate::table('captcha')->exists();
+    } catch(\Lazer\Classes\LazerException $e){
+      Lazer::create('captcha', [
+        'ip' => 'string',
+        'str' => 'string',
+      ]);
+    }
   }
   
   private static function getCommentsTable()
   {
     return Lazer::table('comments');
+  }
+  
+  private static function getCaptchaTable()
+  {
+    return Lazer::table('captcha');
   }
 }

@@ -22,6 +22,24 @@ trait Action
     }
   }
   
+  public function actionCaptchaCheck()
+  {
+    if (!empty(trim($_POST['refresh'] ?? ''))) {
+      $imgData = $this->refreshGetCaptcha();
+      return $this->success('验证码刷新成功', ['img_data' => $imgData]);
+    }
+    
+    $captcha = trim($_POST['captcha'] ?? '');
+    if (empty($captcha)) return $this->error('验证码 不能为空');
+    
+    if ($this->checkCaptcha($captcha)) {
+      return $this->success('验证码正确');
+    } else {
+      $imgData = $this->refreshGetCaptcha();
+      return $this->error('验证码错误', ['img_data' => $imgData]);
+    }
+  }
+  
   public function actionCommentAdd()
   {
     $content = trim($_POST['content'] ?? '');
@@ -32,18 +50,22 @@ trait Action
     $pageKey = trim($_POST['page_key'] ?? '');
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
     $password = trim($_POST['password'] ?? '');
-  
+    $captcha = trim($_POST['captcha'] ?? '');
+    
+    if ($this->isAdmin($nick, $email) && !$this->checkAdminPassword($nick, $email, $password)) {
+      return $this->error('需要管理员身份', ['need_password' => true]);
+    }
+    if (!$this->isAdmin($nick, $email) && $this->isNeedCaptcha() && !$this->checkCaptcha($captcha)) {
+      $imgData = $this->refreshGetCaptcha(); // 生成新的验证码
+      return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
+    }
+    
     if (empty($pageKey)) return $this->error('pageKey 不能为空');
     if (empty($nick)) return $this->error('昵称不能为空');
     if (empty($email)) return $this->error('邮箱不能为空');
     if (empty($content)) return $this->error('内容不能为空');
-  
-    if ($this->isAdmin($nick, $email) && !$this->checkAdminPassword($nick, $email, $password)) {
-      return $this->error('需要管理员身份', ['need_password' => true]);
-    }
-    if (!empty($link) && !$this->urlValidator($link)) {
-      return $this->error('链接不是 URL');
-    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
+    if (!empty($link) && !$this->urlValidator($link)) return $this->error('网址格式错误');
     
     $commentData = [
       'content' => $content,
@@ -59,6 +81,8 @@ trait Action
     $comment = self::getCommentsTable();
     $comment->set($commentData);
     $comment->save();
+  
+    $this->refreshGetCaptcha(); // 刷新验证码
     
     $commentData['id'] = $comment->lastId();
     return $this->success('评论成功', ['comment' => $this->beautifyCommentData($commentData)]);
