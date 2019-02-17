@@ -20,12 +20,8 @@ php -r "copy('Config.example.php', 'Config.php');"
 2. 修改前端页面 Artalk 配置 `serverUrl` 为文件 `/public/index.php` 外部可访问的 URL，例如：
 
 ```js
-var artalk = new Artalk({
-  el: '#ArtalkComments',
-  placeholder: '来啊，快活啊 (/ω＼)',
-  defaultAvatar: 'mp',
-  pageSize: 50,
-  pageKey: 'pageKey',
+new Artalk({
+  // ...
   serverUrl: 'https://example.com/index.php'
 });
 ```
