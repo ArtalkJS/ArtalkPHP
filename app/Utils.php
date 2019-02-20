@@ -132,10 +132,10 @@ class Utils
   
   public static function curl($url)
   {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $result= curl_exec($ch);
+    $ch = \curl_init();
+    \curl_setopt($ch, CURLOPT_URL, $url);
+    \curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $result= \curl_exec($ch);
     return $result;
   }
   
