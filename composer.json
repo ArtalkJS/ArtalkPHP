@@ -1,5 +1,6 @@
 {
   "name": "qwqcode/artalk-server-php",
+  "version": "0.0.1",
   "type": "project",
   "license": "GPL-2.0",
   "authors": [
@@ -10,9 +11,11 @@
   ],
   "require": {
     "PHP": ">=7.0",
+    "ext-curl": "*",
     "ext-json": "*",
     "greg0/lazer-database": "^1.1",
-    "gregwar/captcha": "^1.1"
+    "gregwar/captcha": "^1.1",
+    "phpmailer/phpmailer": "~6.0"
   },
   "scripts": {
     "dev": "php -S localhost:23366 -t public"
@@ -22,7 +25,10 @@
   },
   "autoload": {
     "psr-4": {
-      "lib\\": "lib"
-    }
+      "app\\": "app/"
+    },
+    "files": [
+      "app/Functions.php"
+    ]
   }
 }

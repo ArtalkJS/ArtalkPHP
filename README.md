@@ -1,13 +1,18 @@
-# ArtalkServerPhp
+# Artalk Server PHP
 
-> Artalk 的后端，PHP 版
+> [Artalk](https://artalk.js.org) 的后端，PHP 版
 
-### 要求
+- 轻巧（使用 JSON 文件存储数据）
+- 支持 SMTP / 阿里云DM(Http API) 发送邮件通知
+- 管理员防冒
+- 提交频繁验证码
+
+### 需求
 
 - PHP >=7.0
-- JSON 文件存储数据，无需 SQL 数据库
+- ~~MySql~~（无需 SQL 数据库，JSON 文件存储数据）
 
-### 快速开始
+### 部署
 
 ```bash
 git clone https://github.com/qwqcode/ArtalkServerPhp.git
@@ -15,7 +20,7 @@ composer install
 php -r "copy('Config.example.php', 'Config.php');"
 ```
 
-然后：
+之后：
 
 1. 打开 `/Config.php` 文件，按照注释来配置
 2. 修改前端页面 Artalk 配置 `serverUrl` 为文件 `/public/index.php` 外部可访问的 URL，例如：
@@ -27,9 +32,9 @@ new Artalk({
 });
 ```
 
-#### 安全问题
+#### 需要注意的问题
 
-您需要阻止用户访问 `/data` 目录，因为该目录下的文件中包含用户的个人信息：邮箱、IP 地址 等...
+安全问题：您需要阻止用户访问 `/data` 目录，因为该目录下的文件中包含用户的个人信息：邮箱、IP 地址 等...
 
 通用方法
 

@@ -1,21 +1,9 @@
 <?php
-namespace lib;
+namespace app\components;
 use Gregwar\Captcha\CaptchaBuilder;
 
 trait Permission
 {
-  /**
-   * 运行跨域请求域名控制
-   */
-  private function allowOriginControl()
-  {
-    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-    $allowOrigin = isset($this->conf['allow_origin']) ? $this->conf['allow_origin'] : [];
-    if (in_array($origin, $allowOrigin)){
-      header('Access-Control-Allow-Origin:' . $origin);
-    }
-  }
-  
   /**
    * 是否需要验证码
    *
@@ -33,14 +21,14 @@ trait Permission
     // 时间范围内，评论次数统计
     $inTimeRangeCount = 0;
     foreach ($comments as $item) {
-      if (strtotime($item['date'])+$this->conf['captcha']['timeout'] >= time()) {
+      if (strtotime($item['date'])+_config()['captcha']['timeout'] >= time()) {
         $inTimeRangeCount++;
       } else {
         break;
       }
     }
     
-    if ($inTimeRangeCount >= $this->conf['captcha']['limit']) {
+    if ($inTimeRangeCount >= _config()['captcha']['limit']) {
       // 若超过限制评论次数
       return true;
     } else {
@@ -104,7 +92,7 @@ trait Permission
   }
   
   private function getAdminUsers() {
-    return $this->conf['admin_users'] ?? [];
+    return _config()['admin_users'] ?? [];
   }
   
   private function findAdminUser($nick, $email)

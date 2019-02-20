@@ -1,5 +1,8 @@
 <?php
-namespace lib;
+namespace app\components;
+
+use app\ArtalkServer;
+use app\Utils;
 
 trait Action
 {
@@ -65,7 +68,7 @@ trait Action
     if (empty($email)) return $this->error('邮箱不能为空');
     if (empty($content)) return $this->error('内容不能为空');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
-    if (!empty($link) && !$this->urlValidator($link)) return $this->error('网址格式错误');
+    if (!empty($link) && !Utils::urlValidator($link)) return $this->error('网址格式错误');
     
     $commentData = [
       'content' => $content,
@@ -82,9 +85,15 @@ trait Action
     $comment->set($commentData);
     $comment->save();
   
-    $this->refreshGetCaptcha(); // 刷新验证码
-    
     $commentData['id'] = $comment->lastId();
+    
+    $this->refreshGetCaptcha(); // 刷新验证码
+    try {
+      Utils::sendEmailToCommenter($commentData); // 发送邮件通知
+    } catch (\Exception $e) {
+      return $this->error('通知邮件发送失败，请联系网站管理员', ['error-msg' => $e->getMessage(), 'error-detail' => $e->getTraceAsString()]);
+    }
+    
     return $this->success('评论成功', ['comment' => $this->beautifyCommentData($commentData)]);
   }
   
@@ -163,5 +172,12 @@ trait Action
     }
     
     return $this->success('获取成功', ['reply_comments' => $reply]);
+  }
+  
+  public function actionTest()
+  {
+    $d = ArtalkServer::getCommentsTable()->where('id', '=', '88')->find()->asArray()[0];
+    //var_dump($d);die();
+    Utils::sendEmailToCommenter($d);
   }
 }

@@ -1,5 +1,5 @@
 <?php
-namespace lib;
+namespace app\components;
 use Lazer\Classes\Database as Lazer;
 
 trait Table
@@ -24,7 +24,7 @@ trait Table
       ]);
     }
     // captcha
-    try{
+    try {
       \Lazer\Classes\Helpers\Validate::table('captcha')->exists();
     } catch(\Lazer\Classes\LazerException $e){
       Lazer::create('captcha', [
@@ -34,12 +34,12 @@ trait Table
     }
   }
   
-  private static function getCommentsTable()
+  public static function getCommentsTable()
   {
     return Lazer::table('comments');
   }
   
-  private static function getCaptchaTable()
+  public static function getCaptchaTable()
   {
     return Lazer::table('captcha');
   }
