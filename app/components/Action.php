@@ -176,8 +176,7 @@ trait Action
   
   public function actionTest()
   {
-    $d = ArtalkServer::getCommentsTable()->where('id', '=', '88')->find()->asArray()[0];
-    //var_dump($d);die();
-    Utils::sendEmailToCommenter($d);
+    // 测试过后记得清理
+    return '';
   }
 }
