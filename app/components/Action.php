@@ -174,9 +174,9 @@ trait Action
     return $this->success('获取成功', ['reply_comments' => $reply]);
   }
   
-  public function actionTest()
+  /*public function actionTest()
   {
     // 测试过后记得清理
     return '';
-  }
+  }*/
 }
