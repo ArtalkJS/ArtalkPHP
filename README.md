@@ -3,7 +3,7 @@
 > [Artalk](https://artalk.js.org) 的后端，PHP 版
 
 - 轻巧（使用 JSON 文件存储数据）
-- 支持 SMTP / 阿里云DM(Http API) 发送邮件通知
+- 支持 SMTP / 阿里云DM(Http API) / [qwqaq-email-server](https://github.com/qwqcode/qwqaq-email-server) 发送邮件通知
 - 管理员防冒
 - 提交频繁验证码
 
