@@ -107,7 +107,7 @@ trait Action
     $offset = intval(trim($_POST['offset'] ?? 0));
     $limit = intval(trim($_POST['limit'] ?? 0));
     if ($offset < 0) $offset = 0;
-    if ($limit <= 0) $limit = 30;
+    if ($limit <= 0) $limit = 15;
 
     $commentTable = self::getCommentsTable();
 
@@ -116,7 +116,7 @@ trait Action
       $rawComments = $commentTable
         ->where('page_key', '=', $pageKey)
         ->where('rid', '=', $parentId)
-        ->orderBy('date', 'DESC')
+        ->orderBy('date', 'ASC')
         ->findAll()
         ->asArray();
 
@@ -204,6 +204,55 @@ trait Action
     }
 
     return $this->success('获取成功', ['reply_comments' => $reply]);
+  }
+
+  public function actionCommentDel()
+  {
+    $nick = trim($_POST['nick'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+
+    if (!$this->isAdmin($nick, $email) || !$this->checkAdminPassword($nick, $email, $password)) {
+      return $this->error('需要管理员身份', ['need_password' => true]);
+    }
+
+    $id = intval(trim($_POST['id'] ?? 0));
+    if (empty($id)) return $this->error('id 不能为空');
+
+    $commentTable = self::getCommentsTable();
+
+    if ($commentTable->where('id', '=', $id)->find()->count() === 0) {
+      return $this->error("未找到 ID 为 {$id} 的评论项，或已删除");
+    }
+
+    $delTotal = 0;
+
+    try {
+      $commentTable->where('id', '=', $id)->find()->delete();
+      $delTotal++;
+    } catch (Exception $ex) {
+      return $this->error('删除评论时出现错误'.$ex);
+    }
+
+    // 删除所有子评论
+    $QueryAndDelChild = function ($parentId) use (&$commentTable, &$QueryAndDelChild, &$delTotal) {
+      $comments = $commentTable
+        ->where('rid', '=', $parentId)
+        ->findAll();
+
+      foreach ($comments as $item) {
+        $QueryAndDelChild($item->id);
+        try {
+          $commentTable->where('id', '=', $item->id)->find()->delete();
+          $delTotal++;
+        } catch (Exception $ex) {}
+      }
+    };
+    $QueryAndDelChild($id);
+
+    return $this->success('评论已删除', [
+      'del_total' => $delTotal
+    ]);
   }
 
   /*public function actionTest()

@@ -4,7 +4,7 @@ return [
   'site_name' => 'XXX 的博客',
   // 支持跨域访问的域名
   'allow_origin' => [
-    'http://localhost:8080'
+    'http://localhost:8080' // 或 '*' 跨域无限制
   ],
   // 管理员用户
   'admin_users' => [
