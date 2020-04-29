@@ -11,9 +11,9 @@ trait Action
     $nick = trim($_POST['nick'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
-    if (empty($nick)) return $this->error('昵称 不能为空');
-    if (empty($email)) return $this->error('邮箱 不能为空');
-    if (empty($password)) return $this->error('密码 不能为空');
+    if ($nick == '') return $this->error('昵称 不能为空');
+    if ($email == '') return $this->error('邮箱 不能为空');
+    if ($password == '') return $this->error('密码 不能为空');
 
     if (!$this->isAdmin($nick, $email)) {
       return $this->error('无需管理员权限');
@@ -33,7 +33,7 @@ trait Action
     }
 
     $captcha = trim($_POST['captcha'] ?? '');
-    if (empty($captcha)) return $this->error('验证码 不能为空');
+    if ($captcha == '') return $this->error('验证码 不能为空');
 
     if ($this->checkCaptcha($captcha)) {
       return $this->success('验证码正确');
@@ -63,12 +63,12 @@ trait Action
       return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
     }
 
-    if (empty($pageKey)) return $this->error('pageKey 不能为空');
-    if (empty($nick)) return $this->error('昵称不能为空');
-    if (empty($email)) return $this->error('邮箱不能为空');
-    if (empty($content)) return $this->error('内容不能为空');
+    if ($pageKey == '') return $this->error('pageKey 不能为空');
+    if ($nick == '') return $this->error('昵称不能为空');
+    if ($email == '') return $this->error('邮箱不能为空');
+    if ($content == '') return $this->error('内容不能为空');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
-    if (!empty($link) && !Utils::urlValidator($link)) return $this->error('网址格式错误');
+    if ($link !== '' && !Utils::urlValidator($link)) return $this->error('网址格式错误');
 
     $commentData = [
       'content' => $content,
@@ -100,7 +100,7 @@ trait Action
   public function actionCommentGet()
   {
     $pageKey = trim($_POST['page_key'] ?? '');
-    if (empty($pageKey)) {
+    if ($pageKey == '') {
       return $this->error('page_key 不能为空');
     }
 
@@ -141,12 +141,23 @@ trait Action
       $QueryAllChildren($item['id']);
     }
 
+    // 管理员信息
+    $adminUsers = $this->getAdminUsers();
+    $adminNicks = [];
+    $adminEmails = [];
+    foreach ($adminUsers as $admin) {
+      $adminNicks[] = $admin['nick'];
+      $adminEncryptedEmails[] = md5($admin['email']);
+    }
+
     return $this->success('获取成功', [
       'comments' => $comments,
       'offset' => $offset,
       'limit' => $limit,
       'total_parents' => $commentTable->where('page_key', '=', $pageKey)->where('rid', '=', 0)->findAll()->count(),
-      'total' => $commentTable->where('page_key', '=', $pageKey)->findAll()->count()
+      'total' => $commentTable->where('page_key', '=', $pageKey)->findAll()->count(),
+      'admin_nicks' => $adminNicks,
+      'admin_encrypted_emails' => $adminEncryptedEmails
     ]);
   }
 
@@ -172,8 +183,8 @@ trait Action
   {
     $nick = trim($_POST['nick'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    if (empty($nick)) return $this->error('昵称 不能为空');
-    if (empty($email)) return $this->error('邮箱 不能为空');
+    if ($nick == '') return $this->error('昵称 不能为空');
+    if ($email == '') return $this->error('邮箱 不能为空');
 
     $replyRaw = self::getCommentsTable();
 
@@ -216,6 +227,7 @@ trait Action
       return $this->error('需要管理员身份', ['need_password' => true]);
     }
 
+    // 评论项 ID
     $id = intval(trim($_POST['id'] ?? 0));
     if (empty($id)) return $this->error('id 不能为空');
 
