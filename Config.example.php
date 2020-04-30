@@ -8,7 +8,7 @@ return [
   ],
   // 管理员用户
   'admin_users' => [
-    ['nick' => 'admin', 'email' => 'admin@example.com', 'password' => '']
+    ['nick' => 'admin', 'email' => 'admin@example.com', 'password' => '', 'badge_name' => '管理员', 'badge_color' => '#ffa928']
   ],
   // 验证码
   'captcha' => [

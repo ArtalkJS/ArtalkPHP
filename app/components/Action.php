@@ -172,9 +172,12 @@ trait Action
     }
 
     $comment['email_encrypted'] = md5(strtolower(trim($rawComment['email'])));
-    $comment['badge'] = null;
-    if ($this->isAdmin($rawComment['nick'] ?? null, $rawComment['email'] ?? null)) {
-      $comment['badge'] = '管理员';
+    $findAdminUser = $this->findAdminUser($rawComment['nick'] ?? null, $rawComment['email'] ?? null);
+    if (!empty($findAdminUser)) {
+      $comment['badge'] = [];
+      $comment['badge']['name'] = $findAdminUser['badge_name'] ?? '管理员';
+      $comment['badge']['color'] = $findAdminUser['badge_color'] ?? '#ffa928';
+      $comment['is_admin'] = true;
     }
     return $comment;
   }
