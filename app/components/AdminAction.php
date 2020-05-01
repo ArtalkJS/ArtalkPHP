@@ -124,7 +124,7 @@ trait AdminAction
     $page->is_close_comment = $isCloseComment;
     $page->save();
 
-    $page = $page->where('id', '=', $page->lastId())->findAll()->asArray();
-    return $this->success('页面已更新', $page[0]);
+    $page = self::getPagesTable()->where('page_key', '=', $pageKey)->findAll()->asArray();
+    return $this->success('页面已更新', $page[0] ?? []);
   }
 }
