@@ -21,6 +21,7 @@ trait Table
         'rid' => 'integer',
         'ip' => 'string',
         'date' => 'string',
+        'is_collapsed' => 'boolean',
       ]);
     }
     // captcha
@@ -33,12 +34,12 @@ trait Table
       ]);
     }
   }
-  
+
   public static function getCommentsTable()
   {
     return Lazer::table('comments');
   }
-  
+
   public static function getCaptchaTable()
   {
     return Lazer::table('captcha');

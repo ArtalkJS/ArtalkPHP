@@ -54,4 +54,10 @@ trait Http
       'data' => $data
     ];
   }
+
+  private function response($data)
+  {
+    header('Content-Type: application/json');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+  }
 }

@@ -6,25 +6,6 @@ use app\Utils;
 
 trait Action
 {
-  public function actionAdminCheck()
-  {
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-    if ($nick == '') return $this->error('昵称 不能为空');
-    if ($email == '') return $this->error('邮箱 不能为空');
-    if ($password == '') return $this->error('密码 不能为空');
-
-    if (!$this->isAdmin($nick, $email)) {
-      return $this->error('无需管理员权限');
-    }
-    if ($this->checkAdminPassword($nick, $email, $password)) {
-      return $this->success('密码正确');
-    } else {
-      return $this->error('密码错误');
-    }
-  }
-
   public function actionCaptchaCheck()
   {
     if (!empty(trim($_POST['refresh'] ?? ''))) {
@@ -63,6 +44,14 @@ trait Action
       return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
     }
 
+    if (!empty($rid)) {
+      $replyComment = self::getCommentsTable()->where('id', '=', $rid)->find();
+      if ($replyComment->count() === 0) return $this->error('回复评论已被删除');
+      if ($replyComment->is_collapsed || ($this->isParentCommentCollapsed($replyComment))) {
+        return $this->error('禁止回复被折叠的评论');
+      }
+    }
+
     if ($pageKey == '') return $this->error('pageKey 不能为空');
     if ($nick == '') return $this->error('昵称不能为空');
     if ($email == '') return $this->error('邮箱不能为空');
@@ -70,31 +59,32 @@ trait Action
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
     if ($link !== '' && !Utils::urlValidator($link)) return $this->error('网址格式错误');
 
-    $commentData = [
-      'content' => $content,
-      'nick' => $nick,
-      'email' => $email,
-      'link' => $link,
-      'page_key' => $pageKey,
-      'rid' => $rid,
-      'ua' => $ua,
-      'date' => date("Y-m-d H:i:s"),
-      'ip' => $this->getUserIP()
-    ];
     $comment = self::getCommentsTable();
-    $comment->set($commentData);
+    $comment->content = $content;
+    $comment->nick = $nick;
+    $comment->email = $email;
+    $comment->link = $link;
+    $comment->page_key = $pageKey;
+    $comment->rid = $rid;
+    $comment->ua = $ua;
+    $comment->date = date("Y-m-d H:i:s");
+    $comment->ip = $this->getUserIP();
+    $comment->is_collapsed = false;
     $comment->save();
 
-    $commentData['id'] = $comment->lastId();
+    $lastId = $comment->lastId();
+    $comment = self::getCommentsTable()->where('id', '=', $lastId);
+    $commentArr = @$comment->findAll()->asArray()[0];
+    $comment1 = self::getCommentsTable()->where('id', '=', $lastId)->find();
 
     $this->refreshGetCaptcha(); // 刷新验证码
     try {
-      Utils::sendEmailToCommenter($commentData); // 发送邮件通知
+      Utils::sendEmailToCommenter($commentArr); // 发送邮件通知
     } catch (\Exception $e) {
       return $this->error('通知邮件发送失败，请联系网站管理员', ['error-msg' => $e->getMessage(), 'error-detail' => $e->getTraceAsString()]);
     }
 
-    return $this->success('评论成功', ['comment' => $this->beautifyCommentData($commentData)]);
+    return $this->success('评论成功', ['comment' => $this->beautifyCommentData($comment1)]);
   }
 
   public function actionCommentGet()
@@ -117,12 +107,11 @@ trait Action
         ->where('page_key', '=', $pageKey)
         ->where('rid', '=', $parentId)
         ->orderBy('date', 'ASC')
-        ->findAll()
-        ->asArray();
+        ->findAll();
 
       foreach ($rawComments as $item) {
         $comments[] = $this->beautifyCommentData($item);
-        $QueryAllChildren($item['id']);
+        $QueryAllChildren($item->id);
       }
     };
 
@@ -131,14 +120,13 @@ trait Action
       ->where('rid', '=', 0)
       ->orderBy('date', 'DESC')
       ->limit($limit, $offset)
-      ->findAll()
-      ->asArray();
+      ->findAll();
 
     foreach ($commentsRaw as $item) {
       $comments[] = $this->beautifyCommentData($item);
 
       // Child Comments
-      $QueryAllChildren($item['id']);
+      $QueryAllChildren($item->id);
     }
 
     // 管理员信息
@@ -161,25 +149,48 @@ trait Action
     ]);
   }
 
-  private function beautifyCommentData($rawComment)
+  private function beautifyCommentData($commentObj)
   {
     $comment = [];
-    $showField = ['id', 'content', 'nick', 'link', 'page_key', 'rid', 'ua', 'date'];
-    foreach ($rawComment as $key => $value) {
-      if (in_array($key, $showField)) {
-        $comment[$key] = $value;
-      }
+    $showField = ['id', 'content', 'nick', 'link', 'page_key', 'rid', 'ua', 'date', 'is_collapsed'];
+    foreach ($showField as $field) {
+      if (isset($commentObj->{$field}))
+        $comment[$field] = $commentObj->{$field};
     }
 
-    $comment['email_encrypted'] = md5(strtolower(trim($rawComment['email'])));
-    $findAdminUser = $this->findAdminUser($rawComment['nick'] ?? null, $rawComment['email'] ?? null);
+    $comment['email_encrypted'] = md5(strtolower(trim($commentObj->email)));
+    $findAdminUser = $this->findAdminUser($commentObj->nick ?? null, $commentObj->email ?? null);
     if (!empty($findAdminUser)) {
       $comment['badge'] = [];
       $comment['badge']['name'] = $findAdminUser['badge_name'] ?? '管理员';
       $comment['badge']['color'] = $findAdminUser['badge_color'] ?? '#ffa928';
       $comment['is_admin'] = true;
     }
+
     return $comment;
+  }
+
+  /** 父评论是否有被折叠 */
+  private function isParentCommentCollapsed($srcComment)
+  {
+    if ($srcComment->is_collapsed ?? false) return true;
+    if ($srcComment->rid === 0) return false;
+
+    $pComment = self::getCommentsTable()->where('id', '=', $srcComment->rid)->find();
+    if ($pComment->count() === 0) return false;
+    if ($pComment->is_collapsed) return true;
+    else return $this->isParentCommentCollapsed($pComment); // 继续寻找
+  }
+
+  private function getRootComment($srcComment)
+  {
+    if ($srcComment->rid === 0) return $srcComment;
+
+    $pComment = self::getCommentsTable()->where('id', '=', $srcComment->rid)->find();
+    if ($pComment->count() === 0) return null;
+
+    if ($pComment->rid === 0) return $pComment; // root comment
+    else return $this->getRootComment($pComment); // 继续寻找
   }
 
   public function actionCommentReplyGet()
@@ -218,56 +229,6 @@ trait Action
     }
 
     return $this->success('获取成功', ['reply_comments' => $reply]);
-  }
-
-  public function actionCommentDel()
-  {
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-
-    if (!$this->isAdmin($nick, $email) || !$this->checkAdminPassword($nick, $email, $password)) {
-      return $this->error('需要管理员身份', ['need_password' => true]);
-    }
-
-    // 评论项 ID
-    $id = intval(trim($_POST['id'] ?? 0));
-    if (empty($id)) return $this->error('id 不能为空');
-
-    $commentTable = self::getCommentsTable();
-
-    if ($commentTable->where('id', '=', $id)->find()->count() === 0) {
-      return $this->error("未找到 ID 为 {$id} 的评论项，或已删除");
-    }
-
-    $delTotal = 0;
-
-    try {
-      $commentTable->where('id', '=', $id)->find()->delete();
-      $delTotal++;
-    } catch (Exception $ex) {
-      return $this->error('删除评论时出现错误'.$ex);
-    }
-
-    // 删除所有子评论
-    $QueryAndDelChild = function ($parentId) use (&$commentTable, &$QueryAndDelChild, &$delTotal) {
-      $comments = $commentTable
-        ->where('rid', '=', $parentId)
-        ->findAll();
-
-      foreach ($comments as $item) {
-        $QueryAndDelChild($item->id);
-        try {
-          $commentTable->where('id', '=', $item->id)->find()->delete();
-          $delTotal++;
-        } catch (Exception $ex) {}
-      }
-    };
-    $QueryAndDelChild($id);
-
-    return $this->success('评论已删除', [
-      'del_total' => $delTotal
-    ]);
   }
 
   /*public function actionTest()
