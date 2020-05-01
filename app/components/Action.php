@@ -44,7 +44,7 @@ trait Action
       return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
     }
 
-    if (!empty($rid)) {
+    if ($rid !== 0) {
       $replyComment = self::getCommentsTable()->where('id', '=', $rid)->find();
       if ($replyComment->count() === 0) return $this->error('回复评论已被删除');
       if ($replyComment->is_collapsed || ($this->isParentCommentCollapsed($replyComment))) {
@@ -52,12 +52,22 @@ trait Action
       }
     }
 
-    if ($pageKey == '') return $this->error('pageKey 不能为空');
+    if ($pageKey == '') return $this->error('page_key 不能为空');
     if ($nick == '') return $this->error('昵称不能为空');
     if ($email == '') return $this->error('邮箱不能为空');
     if ($content == '') return $this->error('内容不能为空');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
     if ($link !== '' && !Utils::urlValidator($link)) return $this->error('网址格式错误');
+
+    // 获取页面数据
+    $page = self::getPagesTable()->where('page_key', '=', $pageKey)->findAll()->asArray();
+    if (isset($page[0])) {
+      $page = $page[0];
+      // 评论已关闭
+      if (!$this->isAdmin($nick, $email) && !empty($page['is_close_comment']) && $page['is_close_comment'] === true) {
+        return $this->error('评论已关闭');
+      }
+    }
 
     $comment = self::getCommentsTable();
     $comment->content = $content;
@@ -138,6 +148,19 @@ trait Action
       $adminEncryptedEmails[] = md5($admin['email']);
     }
 
+    // 页面数据
+    $page = self::getPagesTable()->where('page_key', '=', $pageKey)->findAll()->asArray();
+    $pageData = [];
+    if (!isset($page[0])) {
+      $page = self::getPagesTable();
+      $page->page_key = $pageKey;
+      $page->is_close_comment = false;
+      $page->save();
+      $pageData = $page->where('page_key', '=', $pageKey)->findAll()->asArray()[0];
+    } else {
+      $pageData = $page[0];
+    }
+
     return $this->success('获取成功', [
       'comments' => $comments,
       'offset' => $offset,
@@ -145,7 +168,8 @@ trait Action
       'total_parents' => $commentTable->where('page_key', '=', $pageKey)->where('rid', '=', 0)->findAll()->count(),
       'total' => $commentTable->where('page_key', '=', $pageKey)->findAll()->count(),
       'admin_nicks' => $adminNicks,
-      'admin_encrypted_emails' => $adminEncryptedEmails
+      'admin_encrypted_emails' => $adminEncryptedEmails,
+      'page' => $pageData
     ]);
   }
 

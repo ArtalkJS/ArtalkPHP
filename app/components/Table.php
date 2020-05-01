@@ -33,6 +33,15 @@ trait Table
         'str' => 'string',
       ]);
     }
+    // pages
+    try {
+      \Lazer\Classes\Helpers\Validate::table('pages')->exists();
+    } catch(\Lazer\Classes\LazerException $e){
+      Lazer::create('pages', [
+        'page_key' => 'string',
+        'is_close_comment' => 'boolean',
+      ]);
+    }
   }
 
   public static function getCommentsTable()
@@ -43,5 +52,10 @@ trait Table
   public static function getCaptchaTable()
   {
     return Lazer::table('captcha');
+  }
+
+  public static function getPagesTable()
+  {
+    return Lazer::table('pages');
   }
 }

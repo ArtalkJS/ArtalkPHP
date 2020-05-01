@@ -105,4 +105,26 @@ trait AdminAction
       'del_total' => $delTotal
     ]);
   }
+
+  /** 设置页面数据 */
+  public function actionSetPage()
+  {
+    $this->NeedAdmin();
+
+    // 评论项 ID
+    $pageKey = trim($_POST['page_key'] ?? '');
+    if ($pageKey == '') return $this->error('page_key 不能为空');
+    $isCloseComment = boolval(trim($_POST['is_close_comment'] ?? 1)); // 1为关闭评论，0为打开评论
+
+    $page = self::getPagesTable()->where('page_key', '=', $pageKey)->find();
+    if ($page->count() === 0) {
+      $page = self::getPagesTable();
+      $page->page_key = $pageKey;
+    }
+    $page->is_close_comment = $isCloseComment;
+    $page->save();
+
+    $page = $page->where('id', '=', $page->lastId())->findAll()->asArray();
+    return $this->success('页面已更新', $page[0]);
+  }
 }
