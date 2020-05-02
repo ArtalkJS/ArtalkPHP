@@ -244,8 +244,7 @@ trait Action
 
     $replyRaw = $replyRaw
       ->orderBy('date', 'DESC')
-      ->findAll()
-      ->asArray();
+      ->findAll();
 
     $reply = [];
     foreach ($replyRaw as $item) {
