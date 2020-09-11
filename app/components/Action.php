@@ -77,6 +77,7 @@ trait Action
     $comment->page_key = $pageKey;
     $comment->rid = $rid;
     $comment->ua = $ua;
+    $TimeZone = date_default_timezone_set(_config()['TimeZone']);
     $comment->date = date("Y-m-d H:i:s");
     $comment->ip = $this->getUserIP();
     $comment->is_collapsed = false;
