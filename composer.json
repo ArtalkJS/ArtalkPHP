@@ -1,12 +1,12 @@
 {
   "name": "qwqcode/artalk-server-php",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "project",
   "license": "GPL-2.0",
   "authors": [
     {
       "name": "qwqcode",
-      "email": "1149527164@qq.com"
+      "email": "qwqcode@gmail.com"
     }
   ],
   "require": {
@@ -15,7 +15,7 @@
     "ext-json": "*",
     "greg0/lazer-database": "^1.1",
     "gregwar/captcha": "^1.1",
-    "phpmailer/phpmailer": "~6.0"
+    "phpmailer/phpmailer": "^6.1.5"
   },
   "scripts": {
     "dev": "php -S localhost:23366 -t public"

@@ -4,26 +4,15 @@ namespace app\components;
 use app\ArtalkServer;
 use app\Utils;
 
+/**
+ * 基本操作
+ */
 trait Action
 {
-  public function actionCaptchaCheck()
-  {
-    if (!empty(trim($_POST['refresh'] ?? ''))) {
-      $imgData = $this->refreshGetCaptcha();
-      return $this->success('验证码刷新成功', ['img_data' => $imgData]);
-    }
-
-    $captcha = trim($_POST['captcha'] ?? '');
-    if ($captcha == '') return $this->error('验证码 不能为空');
-
-    if ($this->checkCaptcha($captcha)) {
-      return $this->success('验证码正确');
-    } else {
-      $imgData = $this->refreshGetCaptcha();
-      return $this->error('验证码错误', ['img_data' => $imgData]);
-    }
-  }
-
+  /**
+   * Action: CommentGet
+   * Desc  : 评论新增
+   */
   public function actionCommentAdd()
   {
     $content = trim($_POST['content'] ?? '');
@@ -97,6 +86,10 @@ trait Action
     return $this->success('评论成功', ['comment' => $this->beautifyCommentData($comment1)]);
   }
 
+  /**
+   * Action: CommentGet
+   * Desc  : 评论获取
+   */
   public function actionCommentGet()
   {
     $pageKey = trim($_POST['page_key'] ?? '');
@@ -173,6 +166,72 @@ trait Action
     ]);
   }
 
+  /**
+   * Action: CommentReplyGet
+   * Desc  : 回复评论获取
+   */
+  public function actionCommentReplyGet()
+  {
+    $nick = trim($_POST['nick'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    if ($nick == '') return $this->error('昵称 不能为空');
+    if ($email == '') return $this->error('邮箱 不能为空');
+
+    $replyRaw = self::getCommentsTable();
+
+    if (!$this->isAdmin($nick, $email)) {
+      $myComments = self::getCommentsTable()
+        ->where('nick', '=', $nick)
+        ->andWhere('email', '=', $email)
+        ->orderBy('date', 'DESC')
+        ->findAll()
+        ->asArray();
+
+      $idList = [];
+      foreach ($myComments as $item) {
+        $idList[] = $item['id'];
+      }
+
+      $replyRaw = $replyRaw->where('rid', 'IN', $idList);
+    }
+
+    $replyRaw = $replyRaw
+      ->orderBy('date', 'DESC')
+      ->findAll();
+
+    $reply = [];
+    foreach ($replyRaw as $item) {
+      $reply[] = $this->beautifyCommentData($item);
+    }
+
+    return $this->success('获取成功', ['reply_comments' => $reply]);
+  }
+
+  /**
+   * Action: CaptchaCheck
+   * Desc  : 验证码检验
+   */
+  public function actionCaptchaCheck()
+  {
+    if (!empty(trim($_POST['refresh'] ?? ''))) {
+      $imgData = $this->refreshGetCaptcha();
+      return $this->success('验证码刷新成功', ['img_data' => $imgData]);
+    }
+
+    $captcha = trim($_POST['captcha'] ?? '');
+    if ($captcha == '') return $this->error('验证码 不能为空');
+
+    if ($this->checkCaptcha($captcha)) {
+      return $this->success('验证码正确');
+    } else {
+      $imgData = $this->refreshGetCaptcha();
+      return $this->error('验证码错误', ['img_data' => $imgData]);
+    }
+  }
+
+  /** =========================================================== */
+  /** ------------------------- Helpers ------------------------- */
+  /** =========================================================== */
   private function beautifyCommentData($commentObj)
   {
     $comment = [];
@@ -216,47 +275,4 @@ trait Action
     if ($pComment->rid === 0) return $pComment; // root comment
     else return $this->getRootComment($pComment); // 继续寻找
   }
-
-  public function actionCommentReplyGet()
-  {
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    if ($nick == '') return $this->error('昵称 不能为空');
-    if ($email == '') return $this->error('邮箱 不能为空');
-
-    $replyRaw = self::getCommentsTable();
-
-    if (!$this->isAdmin($nick, $email)) {
-      $myComments = self::getCommentsTable()
-        ->where('nick', '=', $nick)
-        ->andWhere('email', '=', $email)
-        ->orderBy('date', 'DESC')
-        ->findAll()
-        ->asArray();
-
-      $idList = [];
-      foreach ($myComments as $item) {
-        $idList[] = $item['id'];
-      }
-
-      $replyRaw = $replyRaw->where('rid', 'IN', $idList);
-    }
-
-    $replyRaw = $replyRaw
-      ->orderBy('date', 'DESC')
-      ->findAll();
-
-    $reply = [];
-    foreach ($replyRaw as $item) {
-      $reply[] = $this->beautifyCommentData($item);
-    }
-
-    return $this->success('获取成功', ['reply_comments' => $reply]);
-  }
-
-  /*public function actionTest()
-  {
-    // 测试过后记得清理
-    return '';
-  }*/
 }

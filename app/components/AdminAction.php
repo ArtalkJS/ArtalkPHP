@@ -4,8 +4,15 @@ namespace app\components;
 use app\ArtalkServer;
 use app\Utils;
 
+/**
+ * 管理员操作
+ */
 trait AdminAction
 {
+  /**
+   * Action: AdminCheck
+   * Desc  : 管理员权限检验
+   */
   public function actionAdminCheck()
   {
     $nick = trim($_POST['nick'] ?? '');
@@ -36,7 +43,10 @@ trait AdminAction
     }
   }
 
-  /** 评论折叠 */
+  /**
+   * Action: CommentCollapse
+   * Desc  : 评论折叠
+   */
   public function actionCommentCollapse()
   {
     $this->NeedAdmin();
@@ -61,7 +71,10 @@ trait AdminAction
     ]);
   }
 
-  /** 评论删除 */
+  /**
+   * Action: CommentDel
+   * Desc  : 评论删除
+   */
   public function actionCommentDel()
   {
     $this->NeedAdmin();
@@ -81,7 +94,7 @@ trait AdminAction
     try {
       $commentTable->where('id', '=', $id)->find()->delete();
       $delTotal++;
-    } catch (Exception $ex) {
+    } catch (\Exception $ex) {
       return $this->error('删除评论时出现错误'.$ex);
     }
 
@@ -96,7 +109,7 @@ trait AdminAction
         try {
           $commentTable->where('id', '=', $item->id)->find()->delete();
           $delTotal++;
-        } catch (Exception $ex) {}
+        } catch (\Exception $ex) {}
       }
     };
     $QueryAndDelChild($id);
@@ -106,7 +119,10 @@ trait AdminAction
     ]);
   }
 
-  /** 设置页面数据 */
+  /**
+   * Action: SetPage
+   * Desc  : 设置页面配置数据
+   */
   public function actionSetPage()
   {
     $this->NeedAdmin();

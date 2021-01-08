@@ -36,7 +36,10 @@ class ArtalkServer {
       // action 参数不正确显示
       if (!$this->wantsJson()) {
         header('Content-Type: text/plain');
-        echo "Artalk Server Php v{$this->version}\n\n > https://github.com/qwqcode/ArtalkServerPhp\n > https://artalk.js.org\n > https://github.com/qwqcode/Artalk\n > https://qwqaq.com";
+        echo "Artalk Server Php v{$this->version}\n\n"
+          . " > https://github.com/ArtalkJS/ArtalkServerPhp\n"
+          . " > https://artalk.js.org\n"
+          . " > https://github.com/ArtalkJS/Artalk";
         return;
       } else {
         $result = $this->error('这是哪？我要干什么？现在几点？蛤？什么鬼！？（╯‵□′）╯︵┴─┴');

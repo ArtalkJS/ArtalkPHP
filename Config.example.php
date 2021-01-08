@@ -8,10 +8,11 @@ return [
   ],
   // 管理员用户
   'admin_users' => [
-    ['nick' => 'admin', 'email' => 'admin@example.com', 'password' => '', 'badge_name' => '管理员', 'badge_color' => '#ffa928']
+    ['nick' => 'admin', 'email' => 'admin@example.com', 'password' => '', 'badge_name' => '管理员', 'badge_color' => '#FF6C00']
   ],
   // 验证码
   'captcha' => [
+    'on' => true, // 总开关
     'limit' => 3, // 评论次数（超过则需验证码；设置为 0 总是需要验证码）
     'timeout' => 4*60, // 超时（x 秒内，提交超过 限制评论次数 则需要验证码）
   ],
