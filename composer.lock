@@ -4,28 +4,28 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0cb7db0447c53b42ba7347346d744358",
+    "content-hash": "de1fd34a67e776a7137d662a80d51bd0",
     "packages": [
         {
             "name": "greg0/lazer-database",
-            "version": "1.2.0",
+            "version": "2.0.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/Greg0/Lazer-Database.git",
-                "reference": "fbee5977618160d697daed677f0ae80f06bc4dd4"
+                "url": "https://github.com/Lazer-Database/Lazer-Database.git",
+                "reference": "ee82e7836fe46119ab6c6ad62c0ca4cc1a78b172"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Greg0/Lazer-Database/zipball/fbee5977618160d697daed677f0ae80f06bc4dd4",
-                "reference": "fbee5977618160d697daed677f0ae80f06bc4dd4",
+                "url": "https://api.github.com/repos/Lazer-Database/Lazer-Database/zipball/ee82e7836fe46119ab6c6ad62c0ca4cc1a78b172",
+                "reference": "ee82e7836fe46119ab6c6ad62c0ca4cc1a78b172",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.6"
+                "php": ">=7.0"
             },
             "require-dev": {
                 "mikey179/vfsstream": "~1.6",
-                "phpunit/phpunit": "^5.6"
+                "phpunit/phpunit": "6.2.0"
             },
             "type": "library",
             "autoload": {
@@ -57,10 +57,10 @@
                 "lazer"
             ],
             "support": {
-                "issues": "https://github.com/Greg0/Lazer-Database/issues",
-                "source": "https://github.com/Greg0/Lazer-Database/tree/1.2.0"
+                "issues": "https://github.com/Lazer-Database/Lazer-Database/issues",
+                "source": "https://github.com/Lazer-Database/Lazer-Database/tree/master"
             },
-            "time": "2020-03-09T17:13:20+00:00"
+            "time": "2020-07-14T16:40:31+00:00"
         },
         {
             "name": "gregwar/captcha",

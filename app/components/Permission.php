@@ -2,102 +2,47 @@
 namespace app\components;
 use Gregwar\Captcha\CaptchaBuilder;
 
+/**
+ * 权限管理
+ */
 trait Permission
 {
-  /**
-   * 是否需要验证码
-   *
-   * @return bool
-   */
-  private function isNeedCaptcha()
+  private function getUserKey() {
+    return md5($this->getUserNick().$this->getUserEmail().$this->getUserIp());
+  }
+
+  private function getUserEmail() {
+    return trim($_POST['email'] ?? '');
+  }
+
+  private function getUserNick() {
+    return trim($_POST['nick'] ?? '');
+  }
+
+  private function getUserPassword() {
+    return trim($_POST['password'] ?? '');
+  }
+
+  private function isAdmin($nick, $email)
   {
-    if (_config()['captcha']['on'] == false) { // 总开关
-      return true;
-    }
+    if (empty($this->getAdminUsers()))
+      return false;
 
-    if (!function_exists('imagettfbbox')) {
-      $this->response($this->error('您开启了验证码功能，但 GD 库不存在'));
-      exit();
-    }
+    if (empty($this->findAdminUser($nick, $email)))
+      return false;
 
-    $ip = $this->getUserIp();
-    $comments = self::getCommentsTable()
-      ->where('ip', '=', $ip)
-      ->orderBy('date', 'DESC')
-      ->findAll()
-      ->asArray();
+    return true;
+  }
 
-    // 时间范围内，评论次数统计
-    $inTimeRangeCount = 0;
-    foreach ($comments as $item) {
-      if (strtotime($item['date'])+_config()['captcha']['timeout'] >= time()) {
-        $inTimeRangeCount++;
-      } else {
-        break;
-      }
-    }
-
-    if ($inTimeRangeCount >= _config()['captcha']['limit']) {
-      // 若超过限制评论次数
+  private function checkAdminPassword($nick, $email, $password)
+  {
+    $password = trim($password);
+    $user = $this->findAdminUser($nick, $email);
+    if (!empty($user) && $password === trim($user['password'])) {
       return true;
     } else {
       return false;
     }
-  }
-
-  /**
-   * 获取验证码的值
-   */
-  private function getCaptchaStr()
-  {
-    $ip = $this->getUserIp();
-    $captcha = self::getCaptchaTable()
-      ->where('ip', '=', $ip)
-      ->find();
-    if (!empty($captcha) && !empty($captcha->str)) {
-      return $captcha->str;
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * 检验验证码
-   *
-   * @param $str
-   * @return bool
-   */
-  private function checkCaptcha($str)
-  {
-    $rightStr = $this->getCaptchaStr();
-    return (!empty($rightStr) && strtolower($str) === strtolower($rightStr));
-  }
-
-  /**
-   * 刷新并获得验证码图片
-   */
-  private function refreshGetCaptcha()
-  {
-    $builder = new CaptchaBuilder;
-    $builder->setBackgroundColor(255, 255, 255);
-    $builder->build();
-
-    $ip = $this->getUserIp();
-    $captcha = self::getCaptchaTable()
-      ->where('ip', '=', $ip)
-      ->find();
-
-    if (empty($captcha)) {
-      $captcha = self::getCaptchaTable();
-    }
-
-    $captcha->set([
-      'ip' => $ip,
-      'str' => $builder->getPhrase()
-    ]);
-    $captcha->save();
-
-    return $builder->inline();
   }
 
   private function getAdminUsers() {
@@ -123,27 +68,5 @@ trait Permission
     }
 
     return $user;
-  }
-
-  private function isAdmin($nick, $email)
-  {
-    if (empty($this->getAdminUsers()))
-      return false;
-
-    if (empty($this->findAdminUser($nick, $email)))
-      return false;
-
-    return true;
-  }
-
-  private function checkAdminPassword($nick, $email, $password)
-  {
-    $password = trim($password);
-    $user = $this->findAdminUser($nick, $email);
-    if (!empty($user) && $password === trim($user['password'])) {
-      return true;
-    } else {
-      return false;
-    }
   }
 }

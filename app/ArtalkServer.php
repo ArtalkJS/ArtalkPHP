@@ -9,6 +9,7 @@ class ArtalkServer {
   use components\Table;
   use components\Http;
   use components\Permission;
+  use components\Captcha;
 
   public static $conf;
   public $version;

@@ -16,21 +16,27 @@ trait Action
   public function actionCommentAdd()
   {
     $content = trim($_POST['content'] ?? '');
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
     $link = trim($_POST['link'] ?? '');
     $rid = intval(trim($_POST['rid'] ?? 0));
     $pageKey = trim($_POST['page_key'] ?? '');
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    $password = trim($_POST['password'] ?? '');
-    $captcha = trim($_POST['captcha'] ?? '');
+
+    $nick = $this->getUserNick();
+    $email = $this->getUserEmail();
+    $password = $this->getUserPassword();
+
+    if ($nick == '') return $this->error('昵称不能为空');
+    if ($email == '') return $this->error('邮箱不能为空');
+
+    if ($this->isNeedCaptcha()) {
+      $imgData = $this->refreshGetCaptcha(); // 生成新的验证码
+      return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
+    }
+
+    $this->logAction(); // 记录一次 IP 操作
 
     if ($this->isAdmin($nick, $email) && !$this->checkAdminPassword($nick, $email, $password)) {
       return $this->error('需要管理员身份', ['need_password' => true]);
-    }
-    if (!$this->isAdmin($nick, $email) && $this->isNeedCaptcha() && !$this->checkCaptcha($captcha)) {
-      $imgData = $this->refreshGetCaptcha(); // 生成新的验证码
-      return $this->error('需要验证码', ['need_captcha' => true, 'img_data' => $imgData]);
     }
 
     if ($rid !== 0) {
@@ -42,8 +48,6 @@ trait Action
     }
 
     if ($pageKey == '') return $this->error('page_key 不能为空');
-    if ($nick == '') return $this->error('昵称不能为空');
-    if ($email == '') return $this->error('邮箱不能为空');
     if ($content == '') return $this->error('内容不能为空');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return $this->error('邮箱格式错误');
     if ($link !== '' && !Utils::urlValidator($link)) return $this->error('网址格式错误');
@@ -76,7 +80,6 @@ trait Action
     $commentArr = @$comment->findAll()->asArray()[0];
     $comment1 = self::getCommentsTable()->where('id', '=', $lastId)->find();
 
-    $this->refreshGetCaptcha(); // 刷新验证码
     try {
       Utils::sendEmailToCommenter($commentArr); // 发送邮件通知
     } catch (\Exception $e) {
@@ -135,7 +138,7 @@ trait Action
     // 管理员信息
     $adminUsers = $this->getAdminUsers();
     $adminNicks = [];
-    $adminEmails = [];
+    $adminEncryptedEmails = [];
     foreach ($adminUsers as $admin) {
       $adminNicks[] = $admin['nick'];
       $adminEncryptedEmails[] = md5($admin['email']);
@@ -172,8 +175,8 @@ trait Action
    */
   public function actionCommentReplyGet()
   {
-    $nick = trim($_POST['nick'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+    $nick = $this->getUserNick();
+    $email = $this->getUserEmail();
     if ($nick == '') return $this->error('昵称 不能为空');
     if ($email == '') return $this->error('邮箱 不能为空');
 
