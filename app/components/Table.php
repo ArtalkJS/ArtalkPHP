@@ -22,6 +22,7 @@ trait Table
         'ip' => 'string',
         'date' => 'string',
         'is_collapsed' => 'boolean',
+        'is_pending' => 'boolean',
       ]);
     }
     // captcha 验证码数据

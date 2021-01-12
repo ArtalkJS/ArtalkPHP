@@ -10,6 +10,10 @@ return [
   'admin_users' => [
     ['nick' => 'admin', 'email' => 'admin@example.com', 'password' => '', 'badge_name' => '管理员', 'badge_color' => '#FF6C00']
   ],
+  // 评论审核
+  'moderation' => [
+    'pending_default' => false, // 发表新评论默认为 “待审状态”
+  ],
   // 验证码
   'captcha' => [
     'on' => true, // 总开关

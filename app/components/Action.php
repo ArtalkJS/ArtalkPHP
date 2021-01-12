@@ -73,6 +73,12 @@ trait Action
     $comment->date = date("Y-m-d H:i:s");
     $comment->ip = $this->getUserIP();
     $comment->is_collapsed = false;
+    $comment->is_pending = false;
+
+    if (_config()['moderation']['pending_default']) {
+      $comment->is_pending = true; // 默认待审状态
+    }
+
     $comment->save();
 
     $lastId = $comment->lastId();
@@ -105,35 +111,13 @@ trait Action
     if ($offset < 0) $offset = 0;
     if ($limit <= 0) $limit = 15;
 
+    $condList = [
+      'page_key' => $pageKey,
+      'is_pending' => 0,
+    ];
+
     $commentTable = self::getCommentsTable();
-
-    $comments = [];
-    $QueryAllChildren = function ($parentId) use (&$commentTable, &$pageKey, &$comments, &$QueryAllChildren) {
-      $rawComments = $commentTable
-        ->where('page_key', '=', $pageKey)
-        ->where('rid', '=', $parentId)
-        ->orderBy('date', 'ASC')
-        ->findAll();
-
-      foreach ($rawComments as $item) {
-        $comments[] = $this->beautifyCommentData($item);
-        $QueryAllChildren($item->id);
-      }
-    };
-
-    $commentsRaw = $commentTable
-      ->where('page_key', '=', $pageKey)
-      ->where('rid', '=', 0)
-      ->orderBy('date', 'DESC')
-      ->limit($limit, $offset)
-      ->findAll();
-
-    foreach ($commentsRaw as $item) {
-      $comments[] = $this->beautifyCommentData($item);
-
-      // Child Comments
-      $QueryAllChildren($item->id);
-    }
+    $comments = $this->getComments($condList, $offset, $limit);
 
     // 管理员信息
     $adminUsers = $this->getAdminUsers();
@@ -161,8 +145,8 @@ trait Action
       'comments' => $comments,
       'offset' => $offset,
       'limit' => $limit,
-      'total_parents' => $commentTable->where('page_key', '=', $pageKey)->where('rid', '=', 0)->findAll()->count(),
-      'total' => $commentTable->where('page_key', '=', $pageKey)->findAll()->count(),
+      'total_parents' => $this->countComments($condList, true),
+      'total' => $this->countComments($condList),
       'admin_nicks' => $adminNicks,
       'admin_encrypted_emails' => $adminEncryptedEmails,
       'page' => $pageData
@@ -170,19 +154,52 @@ trait Action
   }
 
   /**
-   * Action: CommentReplyGet
+   * Action: CommentGetV2
    * Desc  : 回复评论获取
    */
-  public function actionCommentReplyGet()
+  public function actionCommentGetV2()
   {
+    $type = trim($_POST['type'] ?? '');
+    if (!in_array($type, ['all', 'mentions', 'mine', 'pending'])) {
+      return $this->error('type 未知');
+    }
+
     $nick = $this->getUserNick();
     $email = $this->getUserEmail();
     if ($nick == '') return $this->error('昵称 不能为空');
     if ($email == '') return $this->error('邮箱 不能为空');
 
-    $replyRaw = self::getCommentsTable();
+    // 分页
+    $offset = intval(trim($_POST['offset'] ?? 0));
+    $limit = intval(trim($_POST['limit'] ?? 0));
+    if ($offset < 0) $offset = 0;
+    if ($limit <= 0) $limit = 15;
 
-    if (!$this->isAdmin($nick, $email)) {
+    if ($this->isAdmin($nick, $email)) {
+      // 管理员
+      $this->NeedAdmin();
+    }
+
+    $condList = [
+      'nick' => $nick,
+      'email' => $email,
+    ]; // default
+    $queryChildren = true; // 是否查找子评论
+
+    // Type: "all" 全部
+    if ($type == 'all') {
+      if ($this->isAdmin($nick, $email)) { // 管理员
+        $condList = [];
+      } else {
+        $condList = [
+          'nick' => $nick,
+          'email' => $email,
+        ];
+      }
+    }
+
+    // Type: "mentions" 提及
+    if ($type == 'mentions') {
       $myComments = self::getCommentsTable()
         ->where('nick', '=', $nick)
         ->andWhere('email', '=', $email)
@@ -195,19 +212,49 @@ trait Action
         $idList[] = $item['id'];
       }
 
-      $replyRaw = $replyRaw->where('rid', 'IN', $idList);
+      $condList = [
+        'rid' => $idList,
+        'nick:not' => $nick,
+        'email:not' => $email,
+      ];
+      $queryChildren = false;
     }
 
-    $replyRaw = $replyRaw
-      ->orderBy('date', 'DESC')
-      ->findAll();
-
-    $reply = [];
-    foreach ($replyRaw as $item) {
-      $reply[] = $this->beautifyCommentData($item);
+    // Type: "mine" 我的
+    if ($type == 'mine') {
+      $condList = [
+        'nick' => $nick,
+        'email' => $email
+      ];
+      $queryChildren = false;
     }
 
-    return $this->success('获取成功', ['reply_comments' => $reply]);
+    // Type: "pending" 待审
+    if ($type == 'pending') {
+      $queryChildren = false;
+      if ($this->isAdmin($nick, $email)) { // 管理员
+        $condList = [];
+      } else {
+        $condList = [
+          'nick' => $nick,
+          'email' => $email
+        ];
+      }
+
+      $condList = array_merge($condList, [
+        'is_pending' => 1,
+      ]);
+    }
+
+    $comments = $this->getComments($condList, $offset, $limit, $queryChildren);
+
+    return $this->success('获取成功', [
+      'comments' => $comments,
+      'total' => $this->countComments($condList),
+      'total_parents' => $this->countComments($condList, true),
+      'offset' => $offset,
+      'limit' => $limit,
+    ]);
   }
 
   /**
@@ -254,6 +301,71 @@ trait Action
     }
 
     return $comment;
+  }
+
+  /** 获取评论 */
+  private function getComments($condList, $offset, $limit, $queryChildren = true) {
+    $comments = [];
+    $QueryAllChildren = function ($parentId) use (&$pageKey, &$comments, &$QueryAllChildren) {
+      $rawComments = self::getCommentsTable()
+        ->where('rid', '=', $parentId)
+        ->orderBy('date', 'ASC')
+        ->findAll();
+
+      foreach ($rawComments as $item) {
+        $comments[] = $this->beautifyCommentData($item);
+        $QueryAllChildren($item->id);
+      }
+    };
+
+    if ($queryChildren) {
+      $commentsRaw = self::getCommentsTable()->where('rid', '=', 0);
+    } else {
+      $commentsRaw = self::getCommentsTable();
+    }
+
+    $this->applyCondList($commentsRaw, $condList);
+
+    $commentsRaw = $commentsRaw
+      ->orderBy('date', 'DESC')
+      ->limit($limit, $offset)
+      ->findAll();
+
+    foreach ($commentsRaw as $item) {
+      $comments[] = $this->beautifyCommentData($item);
+
+      // Child Comments
+      if ($queryChildren)
+        $QueryAllChildren($item->id);
+    }
+
+    return $comments;
+  }
+
+  /** 获取评论数 */
+  private function countComments($condList, $onlyParent = false) {
+    $comments = self::getCommentsTable();
+    $this->applyCondList($comments, $condList);
+    if ($onlyParent)
+      $comments = $comments->where('rid', '=', 0);
+    return $comments->findAll()->count();
+  }
+
+  private function applyCondList(&$query, $condList) {
+    if (empty($condList)) return;
+    foreach ($condList as $key => $val) {
+      $w = '=';
+      $keyParse = explode(':', $key);
+      $realKey = reset($keyParse);
+
+      if (end($keyParse) == 'not')
+        $w = '!=';
+      if (is_array($val))
+        $w = 'IN';
+
+      $query = $query
+        ->where($realKey, $w, $val);
+    }
   }
 
   /** 父评论是否有被折叠 */
