@@ -2,6 +2,8 @@
 return [
   // 网站名
   'site_name' => 'XXX 的博客',
+  // 时区
+  'TimeZone' => 'Asia/Shanghai',
   // 支持跨域访问的域名
   'allow_origin' => [
     'http://localhost:8080' // 或 '*' 跨域无限制
